@@ -56,6 +56,9 @@ pub enum Error {
     InsufficientBalance = 8,
     EscrowNotActive = 9,
     VectorTooLarge = 10,
+    ZeroAmount = 11,
+    InvalidDeadline = 12,
+    SelfDealing = 13,
 }
 
 #[contract]
@@ -84,6 +87,11 @@ impl VaultixEscrow {
     ) -> Result<(), Error> {
         // Authenticate the depositor
         depositor.require_auth();
+
+        // Validate no self-dealing (depositor cannot be recipient)
+        if depositor == recipient {
+            return Err(Error::SelfDealing);
+        }
 
         // Check if escrow already exists
         let storage_key = get_storage_key(escrow_id);
@@ -282,7 +290,7 @@ fn validate_milestones(milestones: &Vec<Milestone>) -> Result<i128, Error> {
     // Validate each milestone and calculate total
     for milestone in milestones.iter() {
         if milestone.amount <= 0 {
-            return Err(Error::InvalidMilestoneAmount);
+            return Err(Error::ZeroAmount);
         }
 
         total = total
